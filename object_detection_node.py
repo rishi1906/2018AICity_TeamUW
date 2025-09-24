@@ -99,8 +99,6 @@ class ObjectDetection:
         threading.Thread(target=self.watch_folder, daemon=True).start()
         # Start inactivity monitor thread
         threading.Thread(target=self._inactivity_monitor_loop, daemon=True).start()
-
-        self.complete_task()
         
 
 
@@ -163,7 +161,7 @@ class ObjectDetection:
 
     # ---------------- Inactivity Monitor ----------------
     def _inactivity_monitor_loop(self):
-        """Monitor the inactivity of the log file and print 'true' after threshold."""
+        """Monitor log file inactivity and trigger completion after threshold."""
         poll_period = max(0.01, 1.0 / max(self.inactivity_poll_hz, 0.01))
         while not rospy.is_shutdown():
             now_mono = time.monotonic()
@@ -199,11 +197,10 @@ class ObjectDetection:
             inactive_seconds = now_mono - self._last_change_monotonic
             if inactive_seconds >= self.inactivity_seconds:
                 if not self._already_printed_for_current_inactivity:
-                    print("true")
                     try:
-                        sys.stdout.flush()
-                    except Exception:
-                        pass
+                        self.complete_task()
+                    except Exception as e:
+                        rospy.logwarn(f"Inactivity complete_task error: {e}")
                     if self.print_once_per_event:
                         self._already_printed_for_current_inactivity = True
 
